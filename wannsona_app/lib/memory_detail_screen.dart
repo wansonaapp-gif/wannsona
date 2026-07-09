@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'memories_screen.dart';
 import 'memory_create_screen.dart';
@@ -89,13 +90,27 @@ class MemoryDetailScreen extends StatelessWidget {
         ),
       );
     }
-    return Container(
+    return SizedBox(
       height: 200,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F0FE),
-        borderRadius: BorderRadius.circular(16),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: memory.photos.length,
+        itemBuilder: (context, i) {
+          final file = File(memory.photos[i]);
+          return Container(
+            margin: const EdgeInsets.only(right: 8),
+            width: 200,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              image: file.existsSync()
+                ? DecorationImage(image: FileImage(file), fit: BoxFit.cover)
+                : null,
+              color: const Color(0xFFE8F0FE),
+            ),
+            child: file.existsSync() ? null : const Center(child: Text('📷', style: TextStyle(fontSize: 48))),
+          );
+        },
       ),
-      child: const Center(child: Text('📷', style: TextStyle(fontSize: 48))),
     );
   }
 
