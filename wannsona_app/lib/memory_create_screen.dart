@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'memories_screen.dart';
 
 class MemoryCreateScreen extends StatefulWidget {
@@ -17,8 +21,24 @@ class _MemoryCreateScreenState extends State<MemoryCreateScreen> {
   String _category = 'その他';
   String _memoryDate = '';
   bool _isSaving = false;
+  List<String> _photoPaths = [];
+  final _picker = ImagePicker();
 
   final List<String> _categories = ['おでかけ', 'イベント', '季節', '日常', 'その他'];
+
+  Future<void> _pickImage() async {
+    final xfile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (xfile == null) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final fileName = 'memory_\${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final savedPath = p.join(dir.path, fileName);
+    await File(xfile.path).copy(savedPath);
+    setState(() => _photoPaths.add(savedPath));
+  }
+
+  void _removePhoto(int index) {
+    setState(() => _photoPaths.removeAt(index));
+  }
 
   @override
   void initState() {
@@ -79,6 +99,7 @@ class _MemoryCreateScreenState extends State<MemoryCreateScreen> {
         category: _category,
         memoryDate: _memoryDate,
         createdAt: DateTime.now().toIso8601String(),
+        photos: _photoPaths,
       );
       list.insert(0, newMemory);
     }
@@ -174,6 +195,63 @@ class _MemoryCreateScreenState extends State<MemoryCreateScreen> {
                   ),
                 );
               }).toList(),
+            )),
+            const SizedBox(height: 16),
+            _buildSection('写真', Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_photoPaths.isNotEmpty)
+                  SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _photoPaths.length,
+                      itemBuilder: (context, i) => Stack(
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            width: 100, height: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              image: DecorationImage(image: FileImage(File(_photoPaths[i])), fit: BoxFit.cover),
+                            ),
+                          ),
+                          Positioned(
+                            top: 4, right: 12,
+                            child: GestureDetector(
+                              onTap: () => _removePhoto(i),
+                              child: Container(
+                                width: 22, height: 22,
+                                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.red),
+                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF4A90D9).withValues(alpha: 0.5), style: BorderStyle.solid),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_photo_alternate, color: Color(0xFF4A90D9)),
+                        SizedBox(width: 8),
+                        Text('写真を追加', style: TextStyle(color: Color(0xFF4A90D9), fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             )),
             const SizedBox(height: 16),
             _buildSection('メモ（任意）', TextField(
